@@ -1,0 +1,124 @@
+{
+  "_comment": "TAMBAHKAN nodes ini ke workflow /drive-manager yang SUDAH ADA. Connect Switch output baru ke nodes ini.",
+  "_instructions": [
+    "1. Buka workflow Google Drive Manager yang sudah ada",
+    "2. Tambah 2 rules baru di Switch node (list_folders, create_folder)",
+    "3. Copy nodes di bawah dan paste ke workflow",
+    "4. Connect Switch output baru ke nodes yang sesuai",
+    "5. GANTI credential ID Google OAuth2 dengan yang benar",
+    "6. Tambahkan Respond to Webhook di AKHIR workflow"
+  ],
+  "new_nodes": [
+    {
+      "_note": "Tambahkan rule ini di Switch node yang sudah ada",
+      "switch_rule_list_folders": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "list_folders",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "outputIndex": "BARU_2"
+      }
+    },
+    {
+      "_note": "Tambahkan rule ini di Switch node yang sudah ada",
+      "switch_rule_create_folder": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "create_folder",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "outputIndex": "BARU_3"
+      }
+    },
+    {
+      "_note": "Connect Switch output BARU_2 ke node ini",
+      "http_list_folders": {
+        "type": "n8n-nodes-base.httpRequest",
+        "name": "List Folders",
+        "parameters": {
+          "method": "GET",
+          "url": "=https://www.googleapis.com/drive/v3/files?q=mimeType%3D'application%2Fvnd.google-apps.folder'%20and%20'{{ $('Webhook').item.json.parent_id || 'root' }}'%20in%20parents&fields=files(id,name,parents)&pageSize=100",
+          "authentication": "oAuth2"
+        },
+        "_action": "Ambil semua folder dari Google Drive. Filter by parent_id atau root."
+      }
+    },
+    {
+      "_note": "Connect List Folders ke node ini",
+      "code_format_folders": {
+        "type": "n8n-nodes-base.code",
+        "name": "Format Folders Response",
+        "parameters": {
+          "jsCode": "const files = $input.first().json.files || [];\nconst folders = files.map(f => ({\n  id: f.id,\n  name: f.name,\n  parents: f.parents || []\n}));\nreturn [{ json: { folders } }];"
+        },
+        "_action": "Format response: { folders: [{ id, name, parents }] }"
+      }
+    },
+    {
+      "_note": "Connect Switch output BARU_3 ke node ini",
+      "http_create_folder": {
+        "type": "n8n-nodes-base.httpRequest",
+        "name": "Create Folder",
+        "parameters": {
+          "method": "POST",
+          "url": "https://www.googleapis.com/drive/v3/files",
+          "authentication": "oAuth2",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"name\": \"{{ $('Webhook').item.json.name }}\",\n  \"mimeType\": \"application/vnd.google-apps.folder\",\n  \"parents\": [\"{{ $('Webhook').item.json.parent_id || 'root' }}\"]\n}"
+        },
+        "_action": "Buat folder baru di Google Drive"
+      }
+    },
+    {
+      "_note": "Connect Create Folder ke node ini",
+      "code_format_created": {
+        "type": "n8n-nodes-base.code",
+        "name": "Format Created Response",
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nreturn [{ json: {\n  id: data.id,\n  name: data.name,\n  parents: data.parents || []\n} }];"
+        },
+        "_action": "Format response: { id, name, parents }"
+      }
+    },
+    {
+      "_note": "PENTING: Tambahkan node ini di UJUNG paling akhir workflow (SEBELUM atau SESUDAH Respond to Webhook yang sudah ada)",
+      "respond_to_webhook_final": {
+        "type": "n8n-nodes-base.respondToWebhook",
+        "name": "Respond to Webhook",
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {}
+        },
+        "_action": "WAJIB: Node ini harus di AKHIR workflow supaya website nunggu proses selesai sebelum kirim file berikutnya"
+      }
+    }
+  ],
+  "existing_nodes_to_update": {
+    "google_drive_list": {
+      "_note": "Update node Google Drive - List yang sudah ada",
+      "change": "Tambahkan 'parents' di fields yang di-return",
+      "fields_to_add": ["kind", "parents"]
+    },
+    "webhook_upload": {
+      "_note": "Update node Webhook di workflow /web-upload",
+      "change": "Di node Google Drive Upload, tambahkan parents field",
+      "body": {
+        "_note": "Kalau pakai HTTP Request untuk upload, tambahkan ini di body metadata:",
+        "parents": ["{{ $('Webhook').item.json.folder_id || 'root' }}"]
+      }
+    }
+  }
+}

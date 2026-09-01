@@ -1,0 +1,286 @@
+{
+  "name": "Arkbot - Drivelist",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "drive-manager",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9661f3b0-4497-41fc-960e-161f400f6c57",
+      "name": "Webhook",
+      "webhookId": "7a51dce8-077b-4c93-9b37-6bab12cb3ef7"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "list",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7e763d43-3239-46bb-bf34-9246b5311668"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "list"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "98765796-0d3d-4430-8f9c-a01bbd9f7107",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "7b65f12f-e620-406e-9cb3-bbc25c6321d9",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "1lKvWCa7FR23qRYL_mBGpQOhs6JI58sxj",
+            "mode": "list",
+            "cachedResultName": "Arkbot Library",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1lKvWCa7FR23qRYL_mBGpQOhs6JI58sxj"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        448,
+        -80
+      ],
+      "id": "d27b00a2-3454-406b-ae16-bac42e0c5073",
+      "name": "list",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "oKniVbvcRo8IJjd3",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deleteFile",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Webhook').item.json.body.drive_file_id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        448,
+        48
+      ],
+      "id": "97fa5f62-91f2-4d2f-9c4b-02026bdd4c56",
+      "name": "Delete a file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "oKniVbvcRo8IJjd3",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "95f35547-9bce-4423-9484-5d01d1b4f4c3",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        48
+      ],
+      "id": "ec389f05-fd3b-4280-a7ce-e3a78d292ed0",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ files: $json.files }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        864,
+        -16
+      ],
+      "id": "dd95d511-cf11-4135-bfb8-d3f36fb721a9",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "files",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -80
+      ],
+      "id": "6acc540e-c1f1-4854-8961-00fa7e8b5e4c",
+      "name": "Aggregate"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a file": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5ffd35a2-8ba8-4197-9fba-4e7e74447f25",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9090ed05a16ede3ef20e3953e20071e2d3bc1e88d1ac93a48cfcb19a7a1b3c21"
+  },
+  "nodeGroups": [],
+  "id": "hxOCOxIG2ofuwYxI",
+  "tags": []
+}
